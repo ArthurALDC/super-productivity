@@ -3206,7 +3206,7 @@
       "SEARCH": "Search everything with <kbd>{{key}}</kbd>.",
       "SEARCH_PHONE": "Search everything from ☰.",
       "SHORT_SYNTAX": "Type <code>#tag</code>, <code>+project</code> or <code>@tomorrow</code> while adding a task. Help → How to shows more.",
-      "SYNC": "Your data stays on this device. Sync and backups are in Settings.",
+      "SYNC": "Your data stays on this device. Sync, backups and import from Todoist or TickTick are in Settings.",
       "TITLE": "Want more?"
     }
   },
