@@ -80,6 +80,7 @@ import {
 import type { ScheduledDateColor } from '../../tasks/util/get-scheduled-date-color';
 import { GlobalTrackingIntervalService } from '../../../core/global-tracking-interval/global-tracking-interval.service';
 import { DateService } from '../../../core/date/date.service';
+import { LayoutService } from '../../../core-ui/layout/layout.service';
 
 export interface BoardPanelNavigation {
   direction: -1 | 1 | 'up' | 'down';
@@ -133,8 +134,12 @@ export class BoardPanelComponent implements TaskCardList {
   private _injector = inject(Injector);
   private _destroyRef = inject(DestroyRef);
   private _config = inject(GlobalConfigService);
+  private _layout = inject(LayoutService, { optional: true });
   private _cards = viewChildren(PlannerTaskComponent, { read: ElementRef });
   readonly isMoving = signal(false);
+  readonly showSubTasks = signal(true);
+  readonly isMobile = computed(() => this._layout?.isXs() ?? false);
+  readonly areSubTasksCollapsed = computed(() => this.isMobile() && !this.showSubTasks());
 
   rows(): HTMLElement[] {
     return this._cards().map((card) => card.nativeElement as HTMLElement);
@@ -195,6 +200,7 @@ export class BoardPanelComponent implements TaskCardList {
   }
 
   moveToAdjacent(taskId: string, direction: -1 | 1): void {
+    if (this.areSubTasksCollapsed()) return;
     const taskIds = this._taskIdsToMove(taskId);
     if (!taskIds.length) return;
     this.adjacentPanel.emit({
@@ -206,6 +212,7 @@ export class BoardPanelComponent implements TaskCardList {
   }
 
   reorder(taskId: string, direction: TaskCardMove): void {
+    if (this.areSubTasksCollapsed()) return;
     const ids = this.tasks().map((task) => task.id);
     const selected = new Set(this._taskIdsToMove(taskId));
     if (!selected.size) return;
@@ -349,7 +356,20 @@ export class BoardPanelComponent implements TaskCardList {
     return merged;
   });
 
+  visibleTasks = computed(() =>
+    this.areSubTasksCollapsed()
+      ? this.tasks().filter((task) => !task.parentId)
+      : this.tasks(),
+  );
+
+  hasSubTasks = computed(() => this.tasks().some((task) => !!task.parentId));
+
+  toggleSubTasks(): void {
+    this.showSubTasks.update((show) => !show);
+  }
+
   async drop(ev: CdkDragDrop<TaskCopy[], TaskCopy[], TaskCopy>): Promise<void> {
+    if (this.areSubTasksCollapsed()) return;
     if (ev.previousContainer.id === ev.container.id && !this.isManualOrder()) {
       return;
     }

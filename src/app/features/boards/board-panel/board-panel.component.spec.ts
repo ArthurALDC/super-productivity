@@ -32,6 +32,7 @@ import { DEFAULT_PANEL_CFG } from '../boards.const';
 import { BoardsActions } from '../store/boards.actions';
 import { TaskSharedActions } from '../../../root-store/meta/task-shared.actions';
 import { GlobalTrackingIntervalService } from '../../../core/global-tracking-interval/global-tracking-interval.service';
+import { LayoutService } from '../../../core-ui/layout/layout.service';
 
 const PLANNER_TASK_PROVIDERS = [
   {
@@ -148,6 +149,7 @@ describe('BoardPanelComponent - Backlog Feature', () => {
       ],
       providers: [
         ...PLANNER_TASK_PROVIDERS,
+        { provide: LayoutService, useValue: { isXs: signal(false) } },
         provideMockStore({}),
         provideMockActions(() => actions$),
         { provide: Store, useValue: storeMock },
@@ -343,6 +345,7 @@ describe('BoardPanelComponent - Hidden Project Backlog', () => {
       ],
       providers: [
         ...PLANNER_TASK_PROVIDERS,
+        { provide: LayoutService, useValue: { isXs: signal(false) } },
         provideMockStore({}),
         provideMockActions(() => actions$),
         { provide: Store, useValue: storeMock },
@@ -437,10 +440,14 @@ describe('BoardPanelComponent - Tag match mode, sort, inline-create computeds', 
       ],
       providers: [
         ...PLANNER_TASK_PROVIDERS,
+        { provide: LayoutService, useValue: { isXs: signal(false) } },
         provideMockStore({}),
         provideMockActions(() => actions$),
         { provide: Store, useValue: storeMock },
-        { provide: TaskService, useValue: { currentTaskId: signal(null) } },
+        {
+          provide: TaskService,
+          useValue: { currentTaskId: signal(null), getByIdLive$: () => of(undefined) },
+        },
         { provide: MatDialog, useValue: {} },
         { provide: WorkContextService, useValue: {} },
         { provide: ProjectService, useValue: { getProjectsWithoutId$: () => of([]) } },
@@ -457,6 +464,34 @@ describe('BoardPanelComponent - Tag match mode, sort, inline-create computeds', 
     fixture = TestBed.createComponent(BoardPanelComponent);
     component = fixture.componentInstance;
   };
+
+  it('can hide subtasks on mobile without changing the full task set', async () => {
+    const parent = mkTask({ id: 'parent', subTaskIds: ['child'] });
+    const child = mkTask({ id: 'child', parentId: 'parent' });
+    await setup([parent, child]);
+
+    const layout = TestBed.inject(LayoutService) as unknown as {
+      isXs: WritableSignal<boolean>;
+    };
+    layout.isXs.set(true);
+    fixture.componentRef.setInput('panelCfg', {
+      id: 'p',
+      title: 'P',
+      taskIds: [],
+      includedTagIds: [],
+      excludedTagIds: [],
+      taskDoneState: 1,
+      scheduledState: 1,
+      isParentTasksOnly: false,
+      projectIds: [''],
+    } as BoardPanelCfg);
+    fixture.detectChanges();
+
+    expect(component.visibleTasks().map((task) => task.id)).toEqual(['parent', 'child']);
+    component.toggleSubTasks();
+    expect(component.visibleTasks().map((task) => task.id)).toEqual(['parent']);
+    expect(component.tasks().map((task) => task.id)).toEqual(['parent', 'child']);
+  });
 
   describe('includedTagsMatch', () => {
     it('defaults to "all" — task must have every required tag', async () => {
@@ -878,6 +913,7 @@ describe('BoardPanelComponent - drop()', () => {
       ],
       providers: [
         ...PLANNER_TASK_PROVIDERS,
+        { provide: LayoutService, useValue: { isXs: signal(false) } },
         provideMockStore({}),
         provideMockActions(() => actions$),
         { provide: Store, useValue: storeMock },
@@ -1336,6 +1372,7 @@ describe('BoardPanelComponent - add button lookup', () => {
       ],
       providers: [
         ...PLANNER_TASK_PROVIDERS,
+        { provide: LayoutService, useValue: { isXs: signal(false) } },
         provideMockStore({}),
         provideMockActions(() => new ReplaySubject(1)),
         {

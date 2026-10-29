@@ -1,13 +1,24 @@
 <header>
   <div class="title">{{ panelCfg().title | translate }}</div>
-  @if (tasks().length) {
+  @if (visibleTasks().length) {
     <div class="tasks-total-estimate">
       @if (totalEstimate()) {
         <!-- placeholder hidden: the pipe renders '-' for any sub-minute total -->
         <span>{{ totalEstimate() | msToString: false : true }}</span>
       }
-      <mat-icon>task_alt</mat-icon>{{ tasks().length }}
+      <mat-icon>task_alt</mat-icon>{{ visibleTasks().length }}
     </div>
+  }
+  @if (isMobile() && hasSubTasks()) {
+    <button
+      mat-icon-button
+      [attr.aria-label]="T.F.BOARDS.FORM.ONLY_PARENT_TASKS | translate"
+      [attr.aria-pressed]="!showSubTasks()"
+      [title]="T.F.BOARDS.FORM.ONLY_PARENT_TASKS | translate"
+      (click)="toggleSubTasks()"
+    >
+      <mat-icon>{{ showSubTasks() ? 'unfold_less' : 'unfold_more' }}</mat-icon>
+    </button>
   }
   <button
     mat-icon-button
@@ -34,18 +45,18 @@
 <div
   class="task-items"
   cdkDropList
-  [cdkDropListData]="tasks()"
-  [cdkDropListSortingDisabled]="!isManualOrder()"
+  [cdkDropListData]="visibleTasks()"
+  [cdkDropListSortingDisabled]="!isManualOrder() || areSubTasksCollapsed()"
   (cdkDropListDropped)="drop($event)"
 >
-  @for (task of tasks(); track task.id) {
+  @for (task of visibleTasks(); track task.id) {
     <planner-task
       cdkDrag
       [cdkDragData]="task"
       [cdkDragStartDelay]="dragDelayForTouch()"
       [task]="task"
       [focusable]="true"
-      [cdkDragDisabled]="isMoving() || multiSelect.isTouchSelectionMode()"
+      [cdkDragDisabled]="isMoving() || multiSelect.isTouchSelectionMode() || areSubTasksCollapsed()"
       [tagsToHide]="panelCfg().includedTagIds || []"
     >
       @if (task.remindAt) {
